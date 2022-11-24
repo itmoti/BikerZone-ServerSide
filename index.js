@@ -38,26 +38,51 @@ function run() {
       const result = await usersDataBase.insertOne(userInfo)
       res.send(result)
     })
-    // Users route end
 
-    // Products section start
-    
-   app.get('/catagory/:products' , async(req , res) => {
-    const products = req.params.products;
-    const query = {CatagoryName : products }
-    const result = await productsDataBase.find(query).toArray()
-    res.send(result)
-   })
+    // admin start 
 
-    // seller start
-
-    app.post('/dashboard/addProducts', async (req, res) => {
-      const productInfo = req.body;
-      const result = await productsDataBase.insertOne(productInfo)
-    
+    app.get('/dashboard/allBuyers' , async(req , res) => {
+      const query = {seller : false}
+      const result = await  usersDataBase.find(query).toArray()
+      res.send(result)
+    })
+    app.get('/dashboard/allSellers' , async(req , res) => {
+      const query = {seller : true}
+      const result = await  usersDataBase.find(query).toArray()
       res.send(result)
     })
 
+    
+    // admin end 
+
+
+    // Users route end
+
+    // Products section start
+
+    app.get('/catagory/:products', async (req, res) => {
+      const products = req.params.products;
+      const query = { CatagoryName: products }
+      const result = await productsDataBase.find(query).toArray()
+      res.send(result)
+    })
+
+    // seller start
+
+    app.post('/dashboard/Products', async (req, res) => {
+      const productInfo = req.body;
+      const result = await productsDataBase.insertOne(productInfo)
+
+      res.send(result)
+    })
+    app.get('/dashboard/products/:id', async (req, res) => {
+      const email = req.params.id;
+       const query = {
+        SellerEmail : email
+       }
+       const result = await productsDataBase.find(query).toArray()
+       res.send(result)
+    })
 
     // seller end 
 
@@ -65,11 +90,11 @@ function run() {
     // Products section end
 
     //Boking section start
-      app.post('/bookings' , async (req , res) => {
-        const bookingInfo = req.body ;
-        const result = await bookingDataBase.insertOne(bookingInfo)
-        res.send(result)
-      })
+    app.post('/bookings', async (req, res) => {
+      const bookingInfo = req.body;
+      const result = await bookingDataBase.insertOne(bookingInfo)
+      res.send(result)
+    })
     //Booking section end 
   }
   catch {
