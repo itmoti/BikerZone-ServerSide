@@ -20,6 +20,7 @@ function run() {
     const usersDataBase = client.db('BikerZone').collection('users')
     const productsDataBase = client.db('BikerZone').collection('products')
     const CatagoriesDataBase = client.db('BikerZone').collection('catagories')
+    const bookingDataBase = client.db('BikerZone').collection('bookings')
 
 
     // catagory route started 
@@ -62,6 +63,14 @@ function run() {
 
 
     // Products section end
+
+    //Boking section start
+      app.post('/bookings' , async (req , res) => {
+        const bookingInfo = req.body ;
+        const result = await bookingDataBase.insertOne(bookingInfo)
+        res.send(result)
+      })
+    //Booking section end 
   }
   catch {
 
