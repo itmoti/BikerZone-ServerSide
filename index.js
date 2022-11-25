@@ -2,7 +2,7 @@ const express = require('express')
 const app = express()
 require('dotenv').config()
 const cors = require('cors')
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 console.log(process.env.MONGODB_USER)
 
 const port = 5000 || process.env.PORT
@@ -49,6 +49,20 @@ function run() {
     app.get('/dashboard/allSellers' , async(req , res) => {
       const query = {seller : true}
       const result = await  usersDataBase.find(query).toArray()
+      res.send(result)
+    })
+    app.delete('/dashboard/allSellers/:id' , async(req , res) => {
+      const id = req.params.id;
+      console.log(id)
+      const query = {_id :ObjectId(id)}
+      const result = await usersDataBase.deleteOne(query)
+      res.send(result)
+    })
+    app.delete('/dashboard/allBuyers/:id' , async(req , res) => {
+      const id = req.params.id;
+      console.log(id)
+      const query = {_id :ObjectId(id)}
+      const result = await usersDataBase.deleteOne(query)
       res.send(result)
     })
 
