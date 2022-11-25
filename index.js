@@ -34,10 +34,21 @@ function run() {
     //  Users route started
     app.post('/users', async (req, res) => {
       const userInfo = req.body;
-
-      const result = await usersDataBase.insertOne(userInfo)
+      
+      const filter = {email : userInfo.email}
+      console.log(filter)
+      const available = await usersDataBase.findOne(filter)
+      
+      let result;
+      if(!available) {
+         result = await usersDataBase.insertOne(userInfo)
+      }
+     else{
+      result = {message : 'already in database'}
+     }
       res.send(result)
     })
+ 
 
     // admin start 
 
