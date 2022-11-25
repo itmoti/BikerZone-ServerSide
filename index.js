@@ -72,7 +72,7 @@ function run() {
 
     // Users route end
 
-    // Products section start
+    // Products route start
 
     app.get('/catagory/:products', async (req, res) => {
       const products = req.params.products;
@@ -89,6 +89,20 @@ function run() {
 
       res.send(result)
     })
+    app.put('/dashboard/Products/:id', async (req, res) => {
+      const id = req.params.id;
+      console.log(id)
+      const filter = {_id : ObjectId(id)}
+      const options = { upsert: true };
+      const updateDoc = {
+        $set: {
+          Adveritse: true
+        },
+      };
+      const result = await productsDataBase.updateOne(filter , updateDoc , options)
+console.log(result)
+      res.send(result)
+    })
     app.get('/dashboard/products/:id', async (req, res) => {
       const email = req.params.id;
        const query = {
@@ -97,11 +111,42 @@ function run() {
        const result = await productsDataBase.find(query).toArray()
        res.send(result)
     })
+    app.delete('/dashboard/products/:id', async (req, res) => {
+      const id = req.params.id;
+      console.log(id)
+       const query = {_id : ObjectId(id)}
+       const result = await productsDataBase.deleteOne(query)
+       res.send(result)
+    })
+
+    
 
     // seller end 
 
+    // user start 
 
-    // Products section end
+  app.put('/catagory/product/:id' , async (req , res) => {
+    const id =req.params.id
+    const filter = {_id: ObjectId(id)}
+    const options = { upsert: true };
+      const updateDoc = {
+        $set: {
+          Reported: true
+        },
+      };
+      const result = await productsDataBase.updateOne(filter , updateDoc , options)
+      res.send(result)
+  })
+  
+  app.get('/dashboard/reportedItems' , async(req , res) => {
+    const filter = {Reported : true}
+    const result = await productsDataBase.find(filter).toArray()
+    res.send(result)
+  })
+    // user end 
+
+
+    // Products router end
 
     //Boking section start
     app.post('/bookings', async (req, res) => {
