@@ -3,7 +3,8 @@ const app = express()
 require('dotenv').config()
 const cors = require('cors')
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
-console.log(process.env.MONGODB_USER)
+console.log(process.env.MONGODB_USER);
+var jwt = require('jsonwebtoken');
 
 const port = 5000 || process.env.PORT
 
@@ -15,6 +16,9 @@ const uri = `mongodb+srv://${process.env.MONGODB_USER}:${process.env.MONGODB_PAS
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 
 function run() {
+  // function VerifyJwt(req , res , next) {
+  //   const 
+  // }
 
   try {
     const usersDataBase = client.db('BikerZone').collection('users')
@@ -173,6 +177,28 @@ console.log(result)
       res.send(result)
     })
     //Booking section end 
+
+    // jst token creating  route
+
+    app.get('/jwt' , async(req , res) => {
+      const email = req.query.email
+      console.log(email)
+      const filter = {email : email}
+      console.log(filter)
+      const available = await usersDataBase.findOne(filter)
+      console.log(available)
+      console.log('heat')
+     
+      if(!available) {
+        res.send({message : 'not in database'})
+         return 
+         
+      }
+     else{
+      var token = jwt.sign({email}, process.env.JWT_SECRET_KEY);
+      res.send({accessToken : token})
+     }
+    })
   }
   catch {
 
