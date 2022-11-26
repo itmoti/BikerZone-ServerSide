@@ -27,12 +27,14 @@ function run() {
     console.log(accessToken)
     jwt.verify(accessToken , process.env.JWT_SECRET_KEY , function (err , decoded) {
       if(err) {
-        return res.send({message : 'unvalid token'})
+        return res.send({message : 'invalid token'})
       }
       console.log(decoded)
+    if(decoded.email) {
       const decodedMail = decoded.email
       console.log(decodedMail)
       req.decodedMail = decodedMail
+    }
     })
  
     next()
@@ -104,6 +106,19 @@ function run() {
        const query = {_id : ObjectId(id)}
        const result = await productsDataBase.deleteOne(query)
        res.send(result)
+    })
+    app.put('/dashboard/allSellers/verify/:id' , async(req , res) => {
+      const id = req.params.id;
+      const filter = {_id : ObjectId(id)}
+      const options = { upsert: true };
+      const updateDoc = {
+        $set: {
+          Verified: true
+        },
+      };
+      const result = await usersDataBase.updateOne(filter , updateDoc , options)
+console.log(result)
+      res.send(result)
     })
 
     
@@ -183,6 +198,12 @@ console.log(result)
     const result = await productsDataBase.find(filter).toArray()
     res.send(result)
   })
+
+  app.get('/advetisedItems' ,VerifyJwt, async (req ,res) => {
+    const query = {Adveritse : true}
+    const result = await productsDataBase.find(query).toArray()
+    res.send(result)
+  })
     // user end 
 
 
@@ -199,6 +220,7 @@ console.log(result)
     // jst token creating  route
 
     app.get('/jwt' , async(req , res) => {
+      console.log('jwrt')
       const email = req.query.email
       console.log(email)
       const filter = {email : email}
