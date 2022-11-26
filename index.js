@@ -16,9 +16,27 @@ const uri = `mongodb+srv://${process.env.MONGODB_USER}:${process.env.MONGODB_PAS
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 
 function run() {
-  // function VerifyJwt(req , res , next) {
-  //   const 
-  // }
+  function VerifyJwt(req , res , next) {
+    console.log('called')
+    const authHeader = req.headers.authheader
+    console.log(authHeader)
+    if(!authHeader) {
+      return res.send({message : 'Access Token Unavailable'})
+    }
+    const accessToken = authHeader.split(' ')[1]
+    console.log(accessToken)
+    jwt.verify(accessToken , process.env.JWT_SECRET_KEY , function (err , decoded) {
+      if(err) {
+        return res.send({message : 'unvalid token'})
+      }
+      console.log(decoded)
+      const decodedMail = decoded.email
+      console.log(decodedMail)
+      req.decodedMail = decodedMail
+    })
+ 
+    next()
+  }
 
   try {
     const usersDataBase = client.db('BikerZone').collection('users')
@@ -61,7 +79,7 @@ function run() {
       const result = await  usersDataBase.find(query).toArray()
       res.send(result)
     })
-    app.get('/dashboard/allSellers' , async(req , res) => {
+    app.get('/dashboard/allSellers' ,VerifyJwt , async(req , res) => {
       const query = {seller : true}
       const result = await  usersDataBase.find(query).toArray()
       res.send(result)
