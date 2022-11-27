@@ -5,6 +5,8 @@ const cors = require('cors')
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 console.log(process.env.MONGODB_USER);
 var jwt = require('jsonwebtoken');
+const stripe = require("stripe")(process.env.STRIPE_PRIVATE_KEY)
+
 
 const port = 5000 || process.env.PORT
 
@@ -17,22 +19,23 @@ const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology:
 
 function run() {
   function VerifyJwt(req , res , next) {
-    console.log('called')
-    const authHeader = req.headers.authheader
-    console.log(authHeader)
+    console.log(req)
+    const authHeader = req.headers.authorization
+    console.log(req.headers.authorization)
+   
     if(!authHeader) {
       return res.send({message : 'Access Token Unavailable'})
     }
     const accessToken = authHeader.split(' ')[1]
-    console.log(accessToken)
+
     jwt.verify(accessToken , process.env.JWT_SECRET_KEY , function (err , decoded) {
       if(err) {
         return res.send({message : 'invalid token'})
       }
-      console.log(decoded)
+
     if(decoded.email) {
       const decodedMail = decoded.email
-      console.log(decodedMail)
+
       req.decodedMail = decodedMail
     }
     })
@@ -45,6 +48,8 @@ function run() {
     const productsDataBase = client.db('BikerZone').collection('products')
     const CatagoriesDataBase = client.db('BikerZone').collection('catagories')
     const bookingDataBase = client.db('BikerZone').collection('bookings')
+    const paymentsCollection = client.db('BikerZone').collection('payments')
+
 
 
     // catagory route started 
@@ -60,7 +65,6 @@ function run() {
       const userInfo = req.body;
       
       const filter = {email : userInfo.email}
-      console.log(filter)
       const available = await usersDataBase.findOne(filter)
       
       let result;
@@ -76,38 +80,81 @@ function run() {
 
     // admin start 
 
-    app.get('/dashboard/allBuyers' , async(req , res) => {
-      const query = {seller : false}
-      const result = await  usersDataBase.find(query).toArray()
-      res.send(result)
+    app.get('/dashboard/allBuyers' ,VerifyJwt, async(req , res) => {
+      const query = {role : 'buyer'}
+      const email = req.decodedMail
+      const filter = {email : email}
+      const user = await usersDataBase.findOne(filter)
+       if(user?.role === 'admin') {
+        const result = await  usersDataBase.find(query).toArray()
+        return res.send(result)
+      }
+      res.send({message : 'not a admin'})
+    
+      
+     
     })
     app.get('/dashboard/allSellers' ,VerifyJwt , async(req , res) => {
-      const query = {seller : true}
-      const result = await  usersDataBase.find(query).toArray()
-      res.send(result)
+      
+      const query = {role : 'seller'}
+    
+
+      const email = req.decodedMail
+      const filter = {email : email}
+      const user = await usersDataBase.findOne(filter)
+       if(user?.role === 'admin') {
+        const result = await  usersDataBase.find(query).toArray()
+        return res.send(result)
+      }
+      res.send({message : 'not a admin'})
     })
-    app.delete('/dashboard/allSellers/:id' , async(req , res) => {
+    app.delete('/dashboard/allSellers/:id' ,VerifyJwt, async(req , res) => {
+
       const id = req.params.id;
-      console.log(id)
       const query = {_id :ObjectId(id)}
-      const result = await usersDataBase.deleteOne(query)
-      res.send(result)
+
+      const email = req.decodedMail
+      const filter = {email : email}
+      const user = await usersDataBase.findOne(filter)
+       if(user?.role === 'admin') {
+        const result = await usersDataBase.deleteOne(query)
+      return  res.send(result)
+      }
+      res.send({message : 'not a admin'})
+    
+      
     })
-    app.delete('/dashboard/allBuyers/:id' , async(req , res) => {
+    app.delete('/dashboard/allBuyers/:id' , VerifyJwt,async(req , res) => {
       const id = req.params.id;
-      console.log(id)
+
       const query = {_id :ObjectId(id)}
-      const result = await usersDataBase.deleteOne(query)
-      res.send(result)
+  
+
+      const email = req.decodedMail
+      const filter = {email : email}
+      const user = await usersDataBase.findOne(filter)
+       if(user?.role === 'admin') {
+        const result = await usersDataBase.deleteOne(query)
+       return res.send(result)
+      }
+      res.send({message : 'not a admin'})
     })
-    app.delete('/dashboard/reportedproducts/:id', async (req, res) => {
+    app.delete('/dashboard/reportedproducts/:id' , VerifyJwt, async (req, res) => {
       const id = req.params.id;
-      console.log(id)
+   
        const query = {_id : ObjectId(id)}
-       const result = await productsDataBase.deleteOne(query)
-       res.send(result)
+      
+
+       const email = req.decodedMail
+       const filter = {email : email}
+       const user = await usersDataBase.findOne(filter)
+        if(user?.role === 'admin') {
+          const result = await productsDataBase.deleteOne(query)
+         return res.send(result)
+       }
+       res.send({message : 'not a admin'})
     })
-    app.put('/dashboard/allSellers/verify/:id' , async(req , res) => {
+    app.put('/dashboard/allSellers/verify/:id' ,VerifyJwt, async(req , res) => {
       const id = req.params.id;
       const filter = {_id : ObjectId(id)}
       const options = { upsert: true };
@@ -117,7 +164,7 @@ function run() {
         },
       };
       const result = await usersDataBase.updateOne(filter , updateDoc , options)
-console.log(result)
+
       res.send(result)
     })
 
@@ -138,15 +185,26 @@ console.log(result)
 
     // seller start
 
-    app.post('/dashboard/Products', async (req, res) => {
+    app.post('/dashboard/Products',VerifyJwt, async (req, res) => {
+      console.log(req.headers)
       const productInfo = req.body;
-      const result = await productsDataBase.insertOne(productInfo)
-
-      res.send(result)
+      const email = req.decodedMail;
+      const query = {email : email}
+      const  user =await  usersDataBase.findOne(query)
+      console.log(user)
+      if(user.role === 'seller'){
+        const result = await productsDataBase.insertOne(productInfo)
+        return res.send(result)
+      }
+      else {
+       res.send({message : 'User not a seller'})
+      }
+      
+     
     })
-    app.put('/dashboard/Products/:id', async (req, res) => {
+    app.put('/dashboard/Products/:id', VerifyJwt,async (req, res) => {
       const id = req.params.id;
-      console.log(id)
+    
       const filter = {_id : ObjectId(id)}
       const options = { upsert: true };
       const updateDoc = {
@@ -155,7 +213,7 @@ console.log(result)
         },
       };
       const result = await productsDataBase.updateOne(filter , updateDoc , options)
-console.log(result)
+
       res.send(result)
     })
     app.get('/dashboard/products/:id', async (req, res) => {
@@ -166,9 +224,9 @@ console.log(result)
        const result = await productsDataBase.find(query).toArray()
        res.send(result)
     })
-    app.delete('/dashboard/products/:id', async (req, res) => {
+    app.delete('/dashboard/products/:id', VerifyJwt ,async (req, res) => {
       const id = req.params.id;
-      console.log(id)
+   
        const query = {_id : ObjectId(id)}
        const result = await productsDataBase.deleteOne(query)
        res.send(result)
@@ -180,7 +238,7 @@ console.log(result)
 
     // user start 
 
-  app.put('/catagory/product/:id' , async (req , res) => {
+  app.put('/catagory/product/:id' ,VerifyJwt, async (req , res) => {
     const id =req.params.id
     const filter = {_id: ObjectId(id)}
     const options = { upsert: true };
@@ -193,7 +251,7 @@ console.log(result)
       res.send(result)
   })
   
-  app.get('/dashboard/reportedItems' , async(req , res) => {
+  app.get('/dashboard/reportedItems' ,VerifyJwt ,  async(req , res) => {
     const filter = {Reported : true}
     const result = await productsDataBase.find(filter).toArray()
     res.send(result)
@@ -206,25 +264,37 @@ console.log(result)
   })
     // user end 
 
-
+   app.get('/operation' , async(req , res) => {
+    const query = {}
+    console.log('coll')
+    const result = await productsDataBase.deleteMany(query)
+    console.log(result)
+    res.send({ message : 'done'})
+   })
     // Products router end
 
     //Boking section start
-    app.post('/bookings',  async (req, res) => {
+    app.post('/bookings',VerifyJwt,  async (req, res) => {
       const bookingInfo = req.body;
       const result = await bookingDataBase.insertOne(bookingInfo)
       res.send(result)
     })
     app.get('/bookings' , VerifyJwt, async (req , res) => {
       const email = req.query.email
-      console.log(email)
-      // const email = req.params.id
-      console.log(email)
+   
+
       const filter = {BuyerEmail : email}
-      console.log(filter)
+    
       const result = await bookingDataBase.find(filter).toArray()
       res.send(result)
     })
+    app.get('/bookings/:id' , async ( req ,res ) => {
+      const id = req.params.id;
+      const query = {_id: ObjectId(id)}
+      const bookings = await bookingDataBase.findOne(query)
+     
+      res.send(bookings) 
+  })
     //Booking section end 
 
   // admin and seller role checking start 
@@ -233,8 +303,7 @@ console.log(result)
     const query = {email : email}
    
     const user = await usersDataBase.findOne(query)
-    console.log(query)
-    console.log(user)
+
     res.send({isSeller : user?.role === 'seller'})
   }) 
   app.get('/users/admin/:email' , async (req , res) => {
@@ -242,8 +311,7 @@ console.log(result)
     const query = {email : email}
    
     const user = await usersDataBase.findOne(query)
-    console.log(query)
-    console.log(user)
+
     res.send({IsAdmin : user?.role === 'admin'})
   }) 
 
@@ -255,14 +323,13 @@ console.log(result)
     // jst token creating  route
 
     app.get('/jwt' , async(req , res) => {
-      console.log('jwrt')
+ 
       const email = req.query.email
-      console.log(email)
+
       const filter = {email : email}
-      console.log(filter)
+
       const available = await usersDataBase.findOne(filter)
-      console.log(available)
-      console.log('heat')
+  
      
       if(!available) {
         res.send({message : 'not in database'})
@@ -274,6 +341,45 @@ console.log(result)
       res.send({accessToken : token})
      }
     })
+ 
+
+    app.post('/payments'  ,VerifyJwt, async(req , res) => {
+      const payment = req.body;
+      const result = await paymentsCollection.insertOne(payment)
+
+      const id = payment.bookingId
+      const filter = {_id : ObjectId(id)}
+      const updateDoc = {
+          $set : {
+              paid : true , 
+              transactionId : payment.transactionId
+          }
+      }
+
+      const updateBookingsDb = await bookingDataBase.updateOne(filter,updateDoc) 
+      res.send(result)
+  })
+    app.post('/create-payment-intent' , VerifyJwt ,async(req , res) => {
+     
+      const booking = req.body;
+      console.log(booking)
+      const price = booking.ResellPrice;
+      console.log('price' , price)
+      const amount =price*100
+
+      const paymentIntent = await stripe.paymentIntents.create({
+          currency : 'usd' , 
+          amount : amount , 
+          "payment_method_types" : [
+              "card"
+          ] 
+          
+      })
+      res.send({
+          clientSecret : paymentIntent.client_secret 
+      })
+  })
+ 
   }
   catch {
 
