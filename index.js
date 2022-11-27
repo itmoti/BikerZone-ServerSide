@@ -210,12 +210,47 @@ console.log(result)
     // Products router end
 
     //Boking section start
-    app.post('/bookings', async (req, res) => {
+    app.post('/bookings',  async (req, res) => {
       const bookingInfo = req.body;
       const result = await bookingDataBase.insertOne(bookingInfo)
       res.send(result)
     })
+    app.get('/bookings' , VerifyJwt, async (req , res) => {
+      const email = req.query.email
+      console.log(email)
+      // const email = req.params.id
+      console.log(email)
+      const filter = {BuyerEmail : email}
+      console.log(filter)
+      const result = await bookingDataBase.find(filter).toArray()
+      res.send(result)
+    })
     //Booking section end 
+
+  // admin and seller role checking start 
+  app.get('/users/seller/:email' , async (req , res) => {
+    const email = req.params.email;
+    const query = {email : email}
+   
+    const user = await usersDataBase.findOne(query)
+    console.log(query)
+    console.log(user)
+    res.send({isSeller : user?.role === 'seller'})
+  }) 
+  app.get('/users/admin/:email' , async (req , res) => {
+    const email = req.params.email;
+    const query = {email : email}
+   
+    const user = await usersDataBase.findOne(query)
+    console.log(query)
+    console.log(user)
+    res.send({IsAdmin : user?.role === 'admin'})
+  }) 
+
+
+
+  // admin and seller role checking end 
+
 
     // jst token creating  route
 
