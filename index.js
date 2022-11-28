@@ -3,7 +3,7 @@ const app = express()
 require('dotenv').config()
 const cors = require('cors')
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
-console.log(process.env.MONGODB_USER);
+
 var jwt = require('jsonwebtoken');
 const stripe = require("stripe")(process.env.STRIPE_PRIVATE_KEY)
 
@@ -19,9 +19,9 @@ const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology:
 
 function run() {
   function VerifyJwt(req , res , next) {
-    console.log(req)
+   
     const authHeader = req.headers.authorization
-    console.log(req.headers.authorization)
+   
    
     if(!authHeader) {
       return res.send({message : 'Access Token Unavailable'})
@@ -76,8 +76,26 @@ function run() {
      }
       res.send(result)
     })
- 
+     app.get('/validUser/:id' , async(req , res) => {
+    
+      const email = req.params.id;
+     const filter = {email :email }
+     const result = await usersDataBase.findOne(filter)
 
+     res.send({result : result})
+     })
+  
+     app.get('/verifySeller/:id'  , async(req , res) => {
+      const email = req.params.id
+      const filter = {email : email}
+      const result = await usersDataBase.findOne(filter)
+      if(result?.Verified) {
+        return   res.send({verify : true})
+      }
+      else{
+        res.send({verify:false})
+      }
+     })
     // admin start 
 
     app.get('/dashboard/allBuyers' ,VerifyJwt, async(req , res) => {
@@ -180,18 +198,39 @@ function run() {
       const products = req.params.products;
       const query = { CatagoryName: products }
       const result = await productsDataBase.find(query).toArray()
+      // const filter = {} 
+      // const users = await usersDataBase.find(filter).toArray()
+
+    // const user =  result.forEach( product => {
+    //   const selleremail =  product.SellerEmail;
+    //   // console.log(selleremail)
+    //   const query2 = {email:selleremail}
+    //   // console.log(users)
+    //   // const hack =  await usersDataBase.findOne(query2)
+    //   // console.log(hack)
+      
+    //   const email = users.filter(user => user?.email === selleremail )
+    //   const i = 0;
+    //   console.log( i+1, email)
+    //   // console.log(email)
+    //   // console.log(users)
+   
+    //   // const email = users.filter
+    //   // console.log(email)
+    // })
+     
       res.send(result)
     })
 
     // seller start
 
     app.post('/dashboard/Products',VerifyJwt, async (req, res) => {
-      console.log(req.headers)
+    
       const productInfo = req.body;
       const email = req.decodedMail;
       const query = {email : email}
       const  user =await  usersDataBase.findOne(query)
-      console.log(user)
+  
       if(user.role === 'seller'){
         const result = await productsDataBase.insertOne(productInfo)
         return res.send(result)
@@ -264,25 +303,19 @@ function run() {
   })
     // user end 
 
-   app.get('/operation' , async(req , res) => {
-    const query = {}
-    console.log('coll')
-    const result = await productsDataBase.deleteMany(query)
-    console.log(result)
-    res.send({ message : 'done'})
-   })
     // Products router end
 
     //Boking section start
     app.post('/bookings',VerifyJwt,  async (req, res) => {
       const bookingInfo = req.body;
+      console.log(bookingInfo)
       const result = await bookingDataBase.insertOne(bookingInfo)
       res.send(result)
     })
     app.get('/bookings' , VerifyJwt, async (req , res) => {
       const email = req.query.email
    
-
+    console.log(email)
       const filter = {BuyerEmail : email}
     
       const result = await bookingDataBase.find(filter).toArray()
@@ -362,9 +395,9 @@ function run() {
     app.post('/create-payment-intent' , VerifyJwt ,async(req , res) => {
      
       const booking = req.body;
-      console.log(booking)
+   
       const price = booking.ResellPrice;
-      console.log('price' , price)
+  
       const amount =price*100
 
       const paymentIntent = await stripe.paymentIntents.create({
